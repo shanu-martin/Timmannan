@@ -1,107 +1,82 @@
-'''if you are running for the first time then go to line 17 and uncomment that function to install requirements'''
-import socket
-import subprocess
-import sys
-
-def install_req():
-    try:
-        # Attempt to connect to a well-known website
-        socket.create_connection(("www.google.com", 80))  # just checking for internet
-        req = ['pillow', 'requests', 'customtkinter', 'numpy', 'playsound']
-        subprocess.run(['pip', 'install'] + req)
-        print('\033[2J\033[H', end='') 
-    except OSError:
-        print("\033[91mError: Not connected to the internet.\033[0m")
-        sys.exit(1)
-
-# Uncomment this line if running for the first time to install requirements
-# install_req()
-
-print('\033[2J\033[H', end='') 
-import tkinter as tk
+from customtkinter import *
 from PIL import Image, ImageTk
-from playsound import playsound
+import requests
+from io import BytesIO
+import random
 
-def player(file):
-    playsound(file)
+''' Initial Values for the game '''
+# Dice image list
+dl = [
+    'https://i.ibb.co/rMg6Cvk/image.png',
+    'https://i.ibb.co/dcKyhyr/1.jpg',
+    'https://i.ibb.co/k2VJHL3/2.jpg',
+    'https://i.ibb.co/cQ2Fry9/3.jpg',
+    'https://i.ibb.co/jvFJv0t/4.jpg',
+    'https://i.ibb.co/QMftx7z/5.jpg',
+    'https://i.ibb.co/sgbKb4r/6.jpg'
+]
+dice = 0
+players = {
+    1: 0,
+    2: 0
+}
+actv = 1
 
-def show(image_path, title="Image", size=(400, 400), position=(0, 0)):
-    root = tk.Tk()
-    root.title(title)
-    img = Image.open(image_path)
-    img = img.resize(size, Image.LANCZOS) 
-    img = ImageTk.PhotoImage(img)
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    root.geometry(f"{size[0]}x{size[1]}+{screen_width - size[0]}+{position[1]}")
-    root.attributes("-topmost", True)
-    label = tk.Label(root, image=img)
-    label.pack()
-    def keep_on_top():
-        root.attributes("-topmost", True)
-        root.after(100, keep_on_top)
-    # keep_on_top()
-    root.after(1, lambda: root.focus_force())
-    root.after(1, lambda: root.lift())
-    root.after(1, lambda: root.update())
-    root.update()
-    return root, img
+# functions
+def roll():
+    global dice
+    dice = random.randint(1, 6)
 
-'''Project logic starts here
-All the above contents are from ChatGPT'''
-print('\033[96mPlayer Registration\033[0m')
-player_name = input('name :')
+def fetch_image(url):
+    response = requests.get(url)
+    image_data = response.content
+    return Image.open(BytesIO(image_data))
 
-msg = f"\033[93mDora and {player_name.capitalize()} set out on a thrilling adventure today. As they journeyed through the wilderness, their path led them to a weathered bridge with some missing pieces. So you, {player_name}, have to fix the bridge.\033[0m "
-print(msg, end='')
+def place_image_center(root, image_url):
+    # Fetch and resize the background image
+    background_image = fetch_image('https://i.ibb.co/Dr8PLsz/pig-1.jpg')
+    window_width = 800
+    window_height = int(window_width * (3 / 4))
+    background_image = background_image.resize((window_width, window_height), Image.LANCZOS)
+    root.background_photo = CTkImage(background_image, size=(window_width, window_height))
 
-# Task 2
-root, img = show('Project 4/bridge.jpg', 'fix the bridge')
-while True:
-    try:
-        gaps = int(input('How many gaps can you see? : '))
-        if gaps == 7:
-            player('Project 4/bridge.wav')
-            print('Congratulations you fixed the bridge!', end='')
-            root.destroy()
-            break
-        elif gaps == 0:
-            root.destroy()
-            print('You were afraid to continue your adventure, you ran away!')
-            break
-        elif gaps < 7:
-            print(f'You are wrong: {7-gaps} gaps remaining! ')
-            root.destroy()
-            break
-        elif gaps > 7:
-            print(f'You are wrong: only 7 gaps, time to test your eyes', end='\n\n\n')
-            root.destroy()
-            break
-    except ValueError:
-        print('\033[91mInvalid Entry\033[0m  Let`s try again', end='\t')
+    # Create a label to display the background image
+    background_label = CTkLabel(root, image=root.background_photo, text="")
+    background_label.place(x=0, y=0, relwidth=1, relheight=1)
 
-# Task 3
-print('The journey continues...')
-root, img = show('Project 4/map.jpg', 'map')
-print(f'Hey {player_name}, I kind of lost my way. Look at the map. Which way do we have to go, left or right?')
-while True:
-    try:
-        player('Project 4/left.wav')
-        direction = input('Which way should we go? (left/right): ').lower()
-        if direction == 'left':
-            print('Ok, let’s go!')
-            player('Project 4/Ramani.wav')
-            root.destroy()
-            break
-        elif direction == 'right':
-            root.destroy()
-            print('You fool, I cannot swim! You led me to a river.')
-            print('\033[91mDora died\033[0m')
-            break
-        else:
-            root.destroy()
-            print('We lost the way completely.')
-            print('\033[93mGoing back\033[0m')
-            break
-    except Exception:
-        print('\033[91mInvalid Entry\033[0m  Let’s try again', end='\t')
+    # Fetch the center image
+    center_image = fetch_image(image_url)
+
+    # Calculate the scaling factor to fit the image within the desired dimensions
+    width_ratio = 50 / center_image.width
+    height_ratio = 50 / center_image.height
+    scaling_factor = min(width_ratio, height_ratio)
+
+    # Resize the image with the calculated scaling factor
+    center_image = center_image.resize((int(center_image.width * scaling_factor), int(center_image.height * scaling_factor)), Image.LANCZOS)
+    root.center_photo = CTkImage(center_image, size=(int(center_image.width * scaling_factor), int(center_image.height * scaling_factor)))
+
+    # Calculate center position for the center image
+    center_x = (window_width - center_image.width) // 2
+    center_y = (window_height - center_image.height) // 2
+
+    # Create a label to display the center image
+    center_label = CTkLabel(root, image=root.center_photo, text="")
+    center_label.place(x=center_x, y=center_y)
+
+app = CTk()
+app.title("4:3 Aspect Ratio Window")
+
+window_width = 800
+window_height = int(window_width * (3 / 4))
+app.geometry(f"{window_width}x{window_height}")
+app.resizable(False, False)
+background_image_url = 'https://i.ibb.co/Dr8PLsz/pig-1.jpg'
+place_image_center(app, dl[0])  # ready
+
+title_label = CTkLabel(app, text=f'P{actv}`s turn', font=("Helvetica", 16), text_color="white", fg_color=None)
+title_label.place(x=350, y=200)
+
+# The Game Section:
+
+app.mainloop()
